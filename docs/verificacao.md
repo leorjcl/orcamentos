@@ -1,6 +1,6 @@
 # Verificação desta entrega
 
-- 7 testes de cálculo passaram (`npm test`).
+- 15 testes de cálculo, cadastros, snapshots e armazenamento passaram (`npm test`).
 - ESLint passou (`npm run lint`).
 - Build Next.js e TypeScript passaram (`npm run build`).
 - O lockfile anterior estava inconsistente; foi atualizado mantendo as versões diretas. `npm ci --dry-run --ignore-scripts --no-audit --no-fund` passou.
@@ -15,3 +15,7 @@
 5. Verifique o menu no celular e se o resumo e a confirmação de gravação continuam acessíveis.
 
 As entradas deste roteiro são exemplos de teste, não custos reais da empresa.
+
+## Verificar a simplificação
+
+Cadastre uma loja, um papel e uma impressora. Crie um produto selecionando-os. Confira a atualização proporcional de folhas ao alterar a quantidade e os tempos totais. Salve, recarregue, duplique e edite. Altere o preço no cadastro e confira que o rascunho antigo só muda ao aplicar os custos atuais. Rascunhos da versão anterior devem manter seus resultados. A conferência visual no navegador continua pendente.

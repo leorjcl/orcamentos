@@ -1,4 +1,4 @@
-# YGPrint — novo ERP (primeira etapa)
+# YGPrint — novo ERP (precificação simplificada)
 
 Frontend Next.js baseado na referência visual enviada. O painel antigo em produção não foi alterado. Esta versão substitui o protótipo anterior de orçamento na raiz do repositório; esse protótipo permanece no histórico Git.
 
@@ -20,7 +20,10 @@ Abra http://localhost:3000. Para verificar a versão de produção: `npm run bui
 - Custo de matéria-prima, tinta estimada, reserva de consumíveis, depreciação, manutenção, energia, mão de obra, rateio fixo, acabamento e embalagem.
 - Impostos, taxas, margem sobre venda, markup, preço unitário e lucro estimado do lote.
 - `/produtos`: salvar, listar, buscar, editar e exportar rascunhos locais. Atualiza imediatamente após salvar e sincroniza a lista entre abas do mesmo navegador.
-- `/configuracoes`: endereços e etapas de integração.
+- `/configuracoes`: custos da loja, materiais e impressoras reutilizáveis, com gravação local.
+- Tela do produto reduzida a dados do serviço; ajustes e composição do custo recolhidos.
+- Perfis de tinta por custo medido de uma face A4 (texto, colorida e foto). Valores desconhecidos geram aviso de preço parcial.
+- Duplicação de precificações e preservação dos custos históricos de cada rascunho.
 
 Os rascunhos usam localStorage, limitados a 200 registros. **Não são cadastros no WordPress**, não sincronizam entre dispositivos e podem desaparecer ao apagar os dados do navegador. Exportação JSON disponível; ainda não há importação. Custos devem ser revisados antes do uso comercial. Zeros iniciais significam valores ainda não preenchidos; não há custos reais presumidos. 5.000 horas de vida útil, 160 horas mensais e margem de 30% são exemplos editáveis, não recomendações.
 
@@ -39,7 +42,7 @@ Todos os consumos, tempos e custos extras são do **lote inteiro**. Somente a es
 - Venda = custo / (1 − impostos − taxas − margem). Soma dos percentuais precisa ser menor que 100%.
 - Preço por peça arredondado para cima em centavos. Lucro e margem exibidos refletem o preço arredondado e apenas os custos informados.
 
-Este primeiro formulário trabalha com uma matéria-prima e uma máquina por simulação. Cadastro de múltiplos materiais, configurações globais, estoque, clientes, pedidos, autenticação e API ainda serão implementados. Indicadores de faturamento/produção não são simulados.
+Este primeiro formulário trabalha com uma matéria-prima e uma máquina por simulação. Composição com múltiplos materiais, estoque, clientes, pedidos, autenticação e API ainda serão implementados. Indicadores de faturamento/produção não são simulados.
 
 ## Testar
 
@@ -58,3 +61,18 @@ Os testes de cálculo cobrem margem versus markup, lote 3D, unidades e cobertura
 - MySQL da Hostinger acessado por plugin WordPress, nunca diretamente pelo navegador.
 
 Ver `docs/integracao.md` para as decisões pendentes.
+
+
+## Usar a tela simplificada
+
+1. Em **Custos e cadastros → Minha loja**, salve despesas mensais, horas de produção e margem padrão. Energia, mão de obra adicional e taxas ficam recolhidas. Se retiradas já estiverem nos fixos, evite repeti-las em mão de obra.
+2. Em **Materiais**, cadastre preço e conteúdo da embalagem. Para papel, o formato A4 preenche 21 × 29,7 cm. Para filamento, a unidade é grama.
+3. Em **Impressoras**, informe nome e custos do equipamento. Os custos de tinta por perfil são estimativas medidas por face A4; não foram preenchidos automaticamente com valores do fabricante. Campos vazios indicam custo ainda não conhecido.
+4. Na precificação, escolha material e impressora e informe quantidade e tempos totais. Em papel, o consumo padrão é uma folha por impresso, ajustável em **Ajustes deste produto**; a área também pode ser ajustada. O tempo continua sendo do lote inteiro e deve ser revisto quando mudar a quantidade.
+5. Abra **Ver composição do custo** somente quando quiser conferir cada parcela. O rateio fixo continua com a mesma fórmula da primeira etapa.
+
+Cada produto salva uma cópia dos valores utilizados. Editar um material ou uma impressora não muda silenciosamente um rascunho antigo. O botão **Aplicar custos atuais** atualiza explicitamente os valores da loja e dos cadastros vinculados, preservando consumo e área. Rascunhos anteriores sem vínculos continuam calculando com seus próprios valores; a seleção de um novo cadastro substitui somente a parte correspondente.
+
+Em Configurações, **Reaproveitar valores de um rascunho** copia dados para revisão no formulário, sem salvar automaticamente. Tinta no modelo antigo em ml/m² continua funcionando nos rascunhos; os novos perfis por custo/A4 precisam ser preenchidos depois da medição. Não convertemos valores incertos em custos confirmados.
+
+A gravação de rascunhos segue usando a mesma chave local anterior. Cadastros usam `ygprint:presets:v1`. Nenhum dado do WordPress é lido ou alterado. Use o mesmo navegador e domínio para manter os dados locais.

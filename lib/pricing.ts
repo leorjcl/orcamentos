@@ -29,6 +29,13 @@ export type PricingInput = {
   taxesPercent: number;
   feesPercent: number;
   marginPercent: number;
+  // Optional snapshot metadata; old drafts retain their original calculation.
+  materialId?: string;
+  materialName?: string;
+  machineId?: string;
+  machineName?: string;
+  inkCostPerA4?: number;
+  inkProfile?: "text" | "color" | "photo";
 };
 
 export const blankPricing: PricingInput = {
@@ -53,6 +60,11 @@ export function validatePricing(value: unknown): asserts value is PricingInput {
     if (typeof n !== "number" || !Number.isFinite(n) || n < 0 || n > 1e9) throw new Error("Preencha valores numéricos válidos, maiores ou iguais a zero.");
   }
   const p = value as PricingInput;
+  for (const key of ["materialId", "materialName", "machineId", "machineName"] as const) {
+    if (p[key] !== undefined && (typeof p[key] !== "string" || p[key].length > 160)) throw new Error("Referência de cadastro inválida.");
+  }
+  if (p.inkCostPerA4 !== undefined && (!Number.isFinite(p.inkCostPerA4) || p.inkCostPerA4 < 0 || p.inkCostPerA4 > 1e9)) throw new Error("Custo de tinta por A4 inválido.");
+  if (p.inkProfile !== undefined && !["text", "color", "photo"].includes(p.inkProfile)) throw new Error("Perfil de tinta inválido.");
   if (!Number.isInteger(p.quantity) || p.quantity < 1) throw new Error("A quantidade deve ser um número inteiro maior que zero.");
   if (p.packSize <= 0 || p.usefulHours <= 0 || p.productiveHours <= 0 || p.inkBottleMl <= 0) throw new Error("Conteúdo da embalagem, vida útil, horas produtivas e volume de tinta devem ser maiores que zero.");
   if (p.residualValue > p.machineValue) throw new Error("O valor residual não pode superar o valor da máquina.");
@@ -68,8 +80,8 @@ export function calculatePricing(input: PricingInput) {
   const hours = p.machineMinutes / 60;
   const material = p.materialUsed / p.packSize * p.materialPrice;
   const areaM2 = p.category === "digital" ? p.widthCm / 100 * (p.heightCm / 100) * p.sides * p.quantity : 0;
-  const inkMl = areaM2 * p.coveragePercent / 100 * p.inkMlM2;
-  const ink = inkMl / p.inkBottleMl * p.inkPrice;
+  const inkMl = p.inkCostPerA4 === undefined ? areaM2 * p.coveragePercent / 100 * p.inkMlM2 : 0;
+  const ink = p.inkCostPerA4 === undefined ? inkMl / p.inkBottleMl * p.inkPrice : areaM2 / (0.21 * 0.297) * p.inkCostPerA4;
   const losses = (material + ink) * p.wastePercent / 100;
   const depreciation = (p.machineValue - p.residualValue) / p.usefulHours * hours;
   const maintenance = p.maintenanceHour * hours;

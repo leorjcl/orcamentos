@@ -10,7 +10,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "node --experimental-strip-types --test tests/pricing.test.mjs",
+    "test": "node --experimental-strip-types --test tests/pricing.test.mjs tests/presets.test.mjs",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "drizzle-kit generate",
     "test:legacy": "vinext build && node --test tests/rendered-html.test.mjs"
