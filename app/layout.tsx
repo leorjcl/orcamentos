@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "YGPrint Orçamentos",
-  description: "Painel de clientes, pedidos e orçamentos da YGPrint.",
+  title: "YGPrint | Gestão e precificação",
+  description: "Precificação, custos e gestão da produção YGPrint.",
   icons: { icon: "/favicon.svg", shortcut: "/favicon.svg" },
 };
 
