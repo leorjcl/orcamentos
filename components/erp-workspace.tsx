@@ -1,5 +1,6 @@
 "use client";
 
+import { QuotesOrders } from "./quotes-orders";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { blankPricing, calculatePricing, validatePricing, type PricingInput } from "../lib/pricing";
@@ -8,19 +9,21 @@ import { SimplePricing } from "./simple-pricing";
 import { CostSettings } from "./cost-settings";
 import { readPresets } from "../lib/presets";
 
-type View = "dashboard" | "pricing" | "products" | "settings" | "receipts";
+type View = "dashboard" | "pricing" | "products" | "settings" | "receipts" | "orders" | "quotes";
 type Draft = { id: string; updatedAt: string; input: PricingInput };
 const storageKey = "ygprint:pricing-drafts:v1";
 const money = (n: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(n);
 const decimal = (n: number, digits = 2) => n.toLocaleString("pt-BR", { maximumFractionDigits: digits });
 const categories = { "3d": "Impressão 3D", digital: "Impressão digital", outro: "Outros produtos" };
 const nav = [
+  { view: "quotes", href: "/orcamentos", label: "Orçamentos e pedidos", icon: "file" },
   { view: "dashboard", href: "/", label: "Visão geral", icon: "grid" },
   { view: "pricing", href: "/precificacao", label: "Precificação", icon: "calculator" },
   { view: "products", href: "/produtos", label: "Produtos e serviços", icon: "box" },
+  { view: "orders", href: "/ordens-servico", label: "Ordens de serviço", icon: "printer" },
   { view: "receipts", href: "/recibos", label: "Recibos", icon: "file" },
 ];
-const future = [["file", "Orçamentos e pedidos"], ["people", "Clientes"], ["printer", "Produção"], ["box", "Controle de estoque"], ["chart", "Relatórios e custos"]];
+const future = [ ["people", "Clientes"], ["printer", "Produção"], ["box", "Controle de estoque"], ["chart", "Relatórios e custos"]];
 
 function readDrafts(): Draft[] {
   const raw = localStorage.getItem(storageKey);
@@ -123,7 +126,7 @@ export function ErpWorkspace({ view }: { view: View }) {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
-  const titles = { dashboard: "Visão geral", pricing: "Precificação", products: "Produtos e serviços", settings: "Configurações", receipts: "Recibos" };
+  const titles = { dashboard: "Visão geral", pricing: "Precificação", products: "Produtos e serviços", settings: "Configurações", receipts: "Recibos", orders: "Ordens de serviço", quotes: "Orçamentos e pedidos" };
   const meanCost = drafts.length ? drafts.reduce((sum, draft) => sum + calculatePricing(draft.input).unitCost, 0) / drafts.length : 0;
   const meanPrice = drafts.length ? drafts.reduce((sum, draft) => sum + calculatePricing(draft.input).unitPrice, 0) / drafts.length : 0;
 
@@ -142,7 +145,7 @@ export function ErpWorkspace({ view }: { view: View }) {
     <div className="workspace">
       <header className="topbar"><div className="breadcrumbs"><button className="icon-button mobile-menu" aria-label={menuOpen ? "Fechar menu" : "Abrir menu"} aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}><Icon name="menu" /></button><span>Workspace</span><span className="slash">/</span><strong>{titles[view]}</strong></div><div className="topbar-right"><span className="badge blue"><span className="status-dot" /> Ambiente de desenvolvimento</span><div className="profile"><span className="avatar">YG</span><span><strong>YGPrint</strong><small>Painel de gestão</small></span></div></div></header>
       <main id="main-content" className="main-content">
-        <div className="local-banner"><Icon name="file" size={17} /><span><strong>Prévia do novo ERP.</strong> Rascunhos ficam apenas neste navegador. A conexão com o WordPress ainda não está ativa.</span></div>
+        {view !== "orders" && view !== "quotes" && <div className="local-banner"><Icon name="file" size={17} /><span><strong>Prévia do novo ERP.</strong> Rascunhos ficam apenas neste navegador. Precificações ainda não são sincronizadas com o WordPress.</span></div>}
         {notice && <div className="notice" role="status"><div>{notice}{notice.startsWith("Rascunho salvo") && <Link href="/produtos"> Ver produtos →</Link>}</div><button type="button" aria-label="Fechar mensagem" onClick={() => setNotice("")}>×</button></div>}
         {view === "dashboard" && <>
           <div className="page-heading"><div><div className="eyebrow">CONTROLE QUE FAZ A DIFERENÇA</div><h1>Seu negócio, em perspectiva<span className="blue-period">.</span></h1><p>Da matéria-prima ao preço final, cada detalhe conta.</p></div><Link className="primary" href="/precificacao"><Icon name="plus" size={18} /> Nova precificação</Link></div>
@@ -156,6 +159,11 @@ export function ErpWorkspace({ view }: { view: View }) {
           <SimplePricing input={input} onChange={changeInput} onSave={saveDraft} canSave={ready && !storageError} existing={!!draftId || fromTemplate} />
         </>}
         {view === "products" && <><div className="page-heading"><div><div className="eyebrow">CATÁLOGO EM CONSTRUÇÃO</div><h1>Produtos e serviços</h1><p>Rascunhos de precificação salvos neste navegador.</p></div><Link className="primary" href="/precificacao"><Icon name="plus" size={18} /> Nova precificação</Link></div><section className="panel"><div className="panel-heading"><label className="search-field"><Icon name="search" size={18} /><input type="search" aria-label="Buscar produto pelo nome" placeholder="Buscar produto pelo nome…" value={search} onChange={e => setSearch(e.target.value)} /></label><button className="secondary" disabled={!ready || !drafts.length || storageError} onClick={exportDrafts}><Icon name="download" size={17} /> Exportar rascunhos</button></div>{ready ? <DraftTable drafts={drafts} search={search} /> : <p className="loading">Carregando rascunhos…</p>}<div className="panel-footer">{drafts.length} rascunhos · Não sincronizados com outros dispositivos</div></section><p className="helper left">Apagar os dados do navegador remove os rascunhos. A exportação gera uma cópia JSON; a importação será adicionada na etapa de integração.</p></>}
+        {view === "quotes" && <QuotesOrders />}
+        {view === "orders" && <section aria-label="Ordens de serviço">
+          <div className="page-heading"><div><h1>Ordens de serviço</h1><p>Produção, pagamentos e relatórios da gráfica.</p></div><a className="secondary" href="/ordens-servico/index.html" target="_blank" rel="noopener noreferrer">Abrir em tela cheia</a></div>
+          <iframe title="Ordens de serviço YGPrint" src="/ordens-servico/index.html" style={{ width: "100%", height: "max(900px, calc(100dvh - 160px))", border: "1px solid #e2e8f0", borderRadius: 12, background: "#f8fafc" }} />
+        </section>}
         {view === "receipts" && <section aria-label="Gerador de recibos">
           <div className="page-heading"><div><h1>Recibos</h1><p>Preencha, confira e imprima no modelo YGPrint.</p></div><a className="secondary" href="/recibos/index.html" target="_blank" rel="noopener noreferrer">Abrir em tela cheia</a></div>
           <iframe title="Gerador de recibos YGPrint" src="/recibos/index.html" style={{ width: "100%", height: "max(850px, calc(100dvh - 210px))", border: "1px solid #e2e8f0", borderRadius: 12, background: "#f8fafc" }} />

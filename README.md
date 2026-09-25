@@ -13,8 +13,21 @@ npm run dev
 
 Abra http://localhost:3000. Para verificar a versão de produção: `npm run build` e depois `npm start`.
 
+## Separação dos projetos
+
+Este repositório contém somente o frontend Next.js da gráfica YGPrint. O WordPress instalado em `api.ygprint.com.br` é uma instalação separada: não envie o conteúdo deste repositório para a pasta do WordPress. O código do plugin ERP fica em `wordpress/ygprint-erp-api`; a conexão só passa a funcionar após sua instalação e configuração. O YG Indica é outro projeto e seus plugins, conteúdos e configurações não pertencem a este ERP.
+
+## Ordens de serviço com WordPress
+
+A rota `/ordens-servico` mantém o modelo fornecido e passa a usar a API do plugin exclusivo em `wordpress/ygprint-erp-api`. Inclui login, ordens, recebimentos, recibos vinculados e relatório/CSV. Esta parte exige instalar o plugin e configurar a conexão na Hostinger. Veja `docs/instalacao-ordens-servico.md`. Precificações e recibos manuais anteriores continuam locais.
+
+## Orçamentos e pedidos
+
+A rota `/orcamentos` reúne propostas e pedidos salvos no WordPress. Orçamentos têm validade e aprovação explícita; aprovar inicia a produção no mesmo registro. Inclui filtros, CSV e acesso aos recebimentos/recibos da O.S. Requer atualizar o plugin para **0.2.0**. Veja `docs/atualizacao-orcamentos-pedidos.md`.
+
 ## Implementado
 
+- `/recibos`: gerador, impressão/PDF e histórico local; ver `docs/recibos.md`.
 - Layout responsivo YGPrint: menu, visão geral, cartões e tabela de produtos.
 - `/precificacao`: calculadora de lote para 3D, impressão digital e outros produtos.
 - Custo de matéria-prima, tinta estimada, reserva de consumíveis, depreciação, manutenção, energia, mão de obra, rateio fixo, acabamento e embalagem.
@@ -42,7 +55,7 @@ Todos os consumos, tempos e custos extras são do **lote inteiro**. Somente a es
 - Venda = custo / (1 − impostos − taxas − margem). Soma dos percentuais precisa ser menor que 100%.
 - Preço por peça arredondado para cima em centavos. Lucro e margem exibidos refletem o preço arredondado e apenas os custos informados.
 
-Este primeiro formulário trabalha com uma matéria-prima e uma máquina por simulação. Composição com múltiplos materiais, estoque, clientes, pedidos, autenticação e API ainda serão implementados. Indicadores de faturamento/produção não são simulados.
+Este primeiro formulário trabalha com uma matéria-prima e uma máquina por simulação. Composição com múltiplos materiais, estoque e cadastro central de clientes ainda serão implementados. Ordens têm módulo próprio com autenticação e API WordPress; o catálogo de precificação ainda não está vinculado às ordens. Indicadores de faturamento/produção não são simulados.
 
 ## Testar
 
@@ -52,11 +65,12 @@ npm run lint
 npm run build
 ```
 
-Os testes de cálculo cobrem margem versus markup, lote 3D, unidades e cobertura de tinta, energia, arredondamento e entradas inválidas. O teste e os arquivos legados de Vinext/Sites foram preservados para referência, mas `dev`, `build` e `start` agora usam Next.js. A hospedagem Hostinger precisa ter suporte Node.js confirmado antes da implantação. Nenhuma publicação ou alteração DNS foi feita.
+Os testes de cálculo cobrem margem versus markup, lote 3D, unidades e cobertura de tinta, energia, arredondamento e entradas inválidas. `dev`, `build` e `start` usam apenas Next.js. A infraestrutura antiga de Vinext/Cloudflare e os exemplos de banco D1 foram removidos; continuam recuperáveis pelo histórico Git. A implantação do painel é na Hostinger, em `novoerp.ygprint.com.br`.
 
 ## Integração planejada
 
-- Painel: `https://erp.ygprint.com.br`.
+- Painel novo: `https://novoerp.ygprint.com.br`.
+- ERP antigo: `https://erp.ygprint.com.br` (migração pendente).
 - WordPress/API: `https://api.ygprint.com.br`.
 - MySQL da Hostinger acessado por plugin WordPress, nunca diretamente pelo navegador.
 

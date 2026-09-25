@@ -1,4 +1,6 @@
-# Integração — próxima etapa
+# Integração — situação atual e próximas etapas
+
+O módulo de ordens de serviço já tem plugin REST, autenticação, tabelas de ordens/recebimentos/auditoria e relatórios. Sua instalação/configuração é descrita em `instalacao-ordens-servico.md`. As etapas abaixo continuam relevantes para migrar o restante do ERP, que ainda usa armazenamento local.
 
 A referência visual define linguagem e organização, não integrações prontas. Não há telemetria, câmeras ou leitura de CMYK.
 

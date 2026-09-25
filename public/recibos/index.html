@@ -995,6 +995,48 @@
         clearHistory = checkedAction(clearHistory);
         newReceipt = checkedAction(newReceipt);
         window.onload = checkedAction(window.onload);
+        if (new URLSearchParams(location.search).has('pagamento')) {
+            window.onload = async function () {
+                const id = new URLSearchParams(location.search).get('pagamento');
+                const formColumn = document.querySelector('main > section');
+                formColumn.style.display = 'none';
+                const preview = document.querySelector('main > section:last-child');
+                preview.style.gridColumn = '1 / -1';
+                document.querySelector('header').style.display = 'none';
+                const toolbar = document.createElement('div');
+                toolbar.className = 'no-print';
+                toolbar.style.cssText = 'padding:16px;background:#0f172a;color:white;display:flex;gap:20px;align-items:center';
+                toolbar.textContent = 'Carregando recibo salvo no WordPress…';
+                document.body.prepend(toolbar);
+                try {
+                    if (!/^\d+$/.test(id)) throw new Error('Identificador de recibo inválido.');
+                    const response = await fetch('/api/erp/receipts/' + id, {cache:'no-store',credentials:'same-origin'});
+                    const receipt = await response.json();
+                    if (!response.ok) throw new Error(receipt.message || 'Entre em Ordens de serviço para acessar o recibo.');
+                    const snap = receipt.snapshot, os = snap.order;
+                    companyData = snap.company; renderCompanyData();
+                    document.getElementById('receiptNumber').value = String(receipt.id).padStart(4,'0');
+                    document.getElementById('receiptDate').value = snap.date;
+                    document.getElementById('clientName').value = os.clientName;
+                    document.getElementById('clientDoc').value = os.clientDocument;
+                    document.getElementById('clientPhone').value = os.clientPhone;
+                    const method = document.getElementById('paymentMethod');
+                    const opt = document.createElement('option'); opt.value = snap.method; opt.textContent = snap.method; method.append(opt); method.value = snap.method;
+                    const desc = 'Recebimento referente à O.S. #' + os.number + ' — ' + os.items.map(i=>i.description).join('; ');
+                    items = [{description:desc,qty:1,unitPrice:snap.amount}];
+                    document.getElementById('receiptNotes').value = 'Valor recebido nesta operação: ' + formatCurrency(snap.amount) + '. Total da O.S. na emissão: ' + formatCurrency(os.total) + '.' + (receipt.voidedAt ? '\nRECIBO ESTORNADO: ' + receipt.voidReason : '');
+                    document.getElementById('showExtenso').checked = true;
+                    updatePreview();
+                    if (receipt.voidedAt) document.querySelector('#receiptContainer .absolute > div').textContent = 'ESTORNADO';
+                    toolbar.replaceChildren();
+                    const back = document.createElement('a');back.href='/ordens-servico';back.textContent='← Ordens de serviço';toolbar.append(back);
+                    const title = document.createElement('span');title.textContent='Recibo salvo · O.S. #' + os.number;toolbar.append(title);
+                    for(const [label,action] of [['Imprimir',printReceipt],['Baixar PDF',generatePDF]]) {
+                        const button=document.createElement('button');button.textContent=label;button.onclick=action;button.style.cssText='border:1px solid white;border-radius:6px;padding:8px';toolbar.append(button);
+                    }
+                } catch(e) { document.getElementById('receiptContainer').hidden=true;toolbar.textContent=e.message + ' Abra Ordens de serviço para entrar e tente novamente.'; }
+            };
+        }
     </script>
 </body>
 </html>

@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema de Ordem de Serviço e Produção - Gráfica & Impressão 3D</title>
+  <link rel="stylesheet" href="/ordens-servico/style.css?v=0.2.0">
+  <link rel="stylesheet" href="/recibos/assets/fonts.css">
+  <link rel="stylesheet" href="/recibos/assets/fontawesome/css/all.min.css">
+  <style>
+
+    [hidden] { display: none !important; }
+    body { font-family: 'Inter', sans-serif; }
+    
+    @page { size: A4; margin: 10mm; }
+    body { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+    @media print {
+      tr { break-inside: avoid; }
+      body * { visibility: hidden; }
+      #printableArea, #printableArea * { visibility: visible; }
+      #printableArea {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        box-shadow: none !important;
+        border: none !important;
+        background: white !important;
+      }
+      .no-print { display: none !important; }
+      .page-break { page-break-after: always; }
+    }
+
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+  </style>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800 flex flex-col">
+
+
+  <section id="loginPanel" class="max-w-lg mx-auto my-12 p-6 bg-white border rounded-xl no-print">
+    <h1 class="font-bold text-xl">Ordens de serviço · YGPrint</h1>
+    <p class="text-sm text-slate-600 my-3">Entre com uma conta administradora do WordPress da gráfica.</p>
+    <form id="loginForm" class="space-y-3">
+      <label class="block text-sm">Usuário ou e-mail<input id="loginUser" autocomplete="username" required class="block border rounded p-2 w-full"></label>
+      <label class="block text-sm">Senha<input id="loginPassword" type="password" autocomplete="current-password" required class="block border rounded p-2 w-full"></label>
+      <button class="bg-blue-600 text-white rounded px-4 py-2" type="submit">Entrar</button>
+    </form>
+    <p id="loginMessage" role="status" class="text-sm mt-3 text-red-700">Verificando conexão…</p>
+  </section>
+  <div id="serverNotice" role="status" class="no-print bg-blue-50 p-3 text-sm text-blue-900 text-center" hidden></div>
+
+  <!-- Header / Navbar -->
+  <header id="appHeader" hidden class="bg-slate-900 text-white shadow-md no-print sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-wrap gap-3 justify-between items-center">
+      <div class="flex items-center space-x-3">
+        <div class="bg-blue-600 text-white p-2 rounded-lg shadow-inner">
+          <i class="fa-solid fa-cubes-stacked text-xl"></i>
+        </div>
+        <div>
+          <h1 class="font-bold text-lg leading-none tracking-wide text-white">SISTEMA O.S. & PRODUÇÃO</h1>
+          <p class="text-xs text-blue-400 font-medium mt-0.5">Gráfica Rápida & Impressão 3D</p>
+        </div>
+      </div>
+
+      <!-- Tab Buttons -->
+      <nav class="flex flex-wrap space-x-1 sm:space-x-2 bg-slate-800 p-1 rounded-xl border border-slate-700">
+        <button id="tabNewOs" onclick="switchTab('newOs')" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 transition-all bg-blue-600 text-white shadow">
+          <i class="fa-solid fa-plus-circle"></i><span class="hidden sm:inline">Nova O.S.</span>
+        </button>
+        <button id="tabList" onclick="switchTab('list')" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 text-slate-300 hover:text-white hover:bg-slate-700/50 transition-all">
+          <i class="fa-solid fa-list-check"></i><span class="hidden sm:inline">Gerenciar</span>
+        </button>
+        <button id="tabCompany" onclick="switchTab('company')" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 text-slate-300 hover:text-white hover:bg-slate-700/50 transition-all">
+          <i class="fa-solid fa-store"></i><span class="hidden sm:inline">Empresa</span>
+        </button>
+        <button id="tabReports" onclick="switchTab('reports')" class="px-3 py-1 text-xs">Relatórios</button>
+        <button onclick="logout()" class="px-3 py-1 text-xs">Sair</button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main id="appMain" hidden class="flex-grow max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+
+    <section id="viewReports" class="hidden bg-white rounded-xl p-5 space-y-4 no-print">
+      <h2 class="font-bold text-lg">Relatório de ordens e recebimentos</h2>
+      <div class="flex flex-wrap gap-3 items-end"><label>De<input id="reportFrom" type="date" class="block border p-2 rounded"></label><label>Até<input id="reportTo" type="date" class="block border p-2 rounded"></label><button onclick="loadReport()" class="bg-blue-600 text-white p-2 rounded">Consultar</button><button onclick="exportReport()" class="border p-2 rounded">Exportar ordens CSV</button></div>
+      <p class="text-xs text-slate-500">Ordens pela data de emissão. Recebimentos pela data do pagamento, desconsiderando estornos. Saldo atual das ordens aprovadas emitidas no período. Valores de orçamento e cancelados são apresentados separadamente. Este relatório não calcula lucro.</p>
+      <div id="reportContent" aria-live="polite"></div>
+    </section>
+    <!-- VIEW: NEW / EDIT OS -->
+    <div id="viewNewOs" class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      
+      <!-- FORM COLUMN (Left) -->
+      <div class="lg:col-span-6 space-y-6 no-print">
+        
+        <!-- Action Bar -->
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex justify-between items-center">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">O.S. Nº</span>
+            <input type="text" id="osNumber" readonly title="Número gerado pelo banco ao salvar" class="w-24 font-mono font-bold text-slate-800 bg-slate-100 px-2 py-1 rounded border border-slate-300 text-center text-sm focus:outline-none focus:border-blue-500">
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="createNewOs()" class="px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-300 transition-colors">
+              <i class="fa-solid fa-rotate-left mr-1"></i> Limpar
+            </button>
+            <button onclick="saveOS()" class="px-4 py-1.5 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm transition-colors flex items-center gap-1.5">
+              <i class="fa-solid fa-floppy-disk"></i> <span id="saveLabel">Salvar O.S.</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Form Card -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 space-y-5">
+          
+          <!-- Status & Datas -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Status</label>
+              <select id="osStatus" onchange="renderPreview()" class="w-full bg-slate-50 border border-slate-300 rounded-lg text-xs p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none font-medium">
+                <option value="Orçamento">📝 Orçamento</option>
+                <option value="Aguardando Aprovação">⏳ Aguardando Aprovação</option>
+                <option value="Em Produção" selected>⚙️ Em Produção</option>
+                <option value="Pronto para Retirada">✅ Pronto p/ Retirada</option>
+                <option value="Entregue">🎉 Entregue / Finalizado</option>
+                <option value="Recusado">Recusado</option>
+                <option value="Cancelado">❌ Cancelado</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Data Emissão</label>
+              <input type="date" id="osDate" onchange="renderPreview()" class="w-full bg-slate-50 border border-slate-300 rounded-lg text-xs p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Previsão Entrega</label>
+              <input type="date" id="osDeliveryDate" onchange="renderPreview()" class="w-full bg-slate-50 border border-slate-300 rounded-lg text-xs p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            </div>
+          </div>
+
+          <hr class="border-slate-100">
+
+          <section id="quotePanel" hidden class="bg-blue-50 border p-3 rounded-lg space-y-3">
+            <label class="block text-xs font-semibold">Validade do orçamento<input id="quoteValidUntil" type="date" onchange="renderPreview()" class="block border rounded p-2 mt-2"></label>
+            <p class="text-xs">Após a aprovação, este mesmo número passa a ser um pedido em produção. Confira o prazo de entrega antes de aprovar.</p>
+            <button id="approveQuoteButton" type="button" onclick="approveQuote()" class="bg-blue-600 text-white rounded px-4 py-2 text-xs">Aprovar e iniciar pedido</button>
+          </section>
+          <p id="approvalInfo" class="text-xs text-blue-700" hidden></p>
+          <!-- Dados do Cliente -->
+          <div>
+            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+              <i class="fa-solid fa-user text-blue-500"></i> Dados do Cliente
+            </h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div class="sm:col-span-2">
+                <input type="text" id="clientName" oninput="renderPreview()" placeholder="Nome do Cliente / Empresa *" class="w-full bg-slate-50 border border-slate-300 rounded-lg text-xs p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+              </div>
+              <div>
+                <input type="text" id="clientPhone" oninput="renderPreview()" placeholder="Telefone / WhatsApp" class="w-full bg-slate-50 border border-slate-300 rounded-lg text-xs p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+              </div>
+              <div>
+                <input type="text" id="clientDocument" oninput="renderPreview()" placeholder="CPF / CNPJ" class="w-full bg-slate-50 border border-slate-300 rounded-lg text-xs p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+              </div>
+            </div>
+          </div>
+
+          <hr class="border-slate-100">
+
+          <!-- Itens da Produção (Gráfica / 3D) -->
+          <div>
+            <div class="flex justify-between items-center mb-3">
+              <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                <i class="fa-solid fa-boxes-packing text-blue-500"></i> Itens & Serviços da Produção
+              </h3>
+              <button onclick="addItemRow()" class="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1">
+                <i class="fa-solid fa-plus-circle"></i> Adicionar Item
+              </button>
+            </div>
+
+            <!-- Dynamic Items Container -->
+            <div id="itemsContainer" class="space-y-3">
+              <!-- Item Row Template generated via JS -->
+            </div>
+          </div>
+
+          <hr class="border-slate-100">
+
+          <!-- Pagamento e Valores -->
+          <div>
+            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+              <i class="fa-solid fa-calculator text-blue-500"></i> Pagamento & Insumos Extra
+            </h3>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Forma de Pagamento</label>
+                <select id="osPaymentMethod" onchange="renderPreview()" class="w-full bg-slate-50 border border-slate-300 rounded-lg text-xs p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                  <option value="Pix">Pix</option>
+                  <option value="Cartão de Crédito">Cartão de Crédito</option>
+                  <option value="Cartão de Débito">Cartão de Débito</option>
+                  <option value="Dinheiro">Dinheiro</option>
+                  <option value="Faturado / Boleto">Faturado / Boleto</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Valor do Sinal/Entrada (R$)</label>
+                <input type="number" step="0.01" id="osDeposit" oninput="renderPreview()" placeholder="0,00" class="w-full bg-slate-50 border border-slate-300 rounded-lg text-xs p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Desconto (R$)</label>
+                <input type="number" step="0.01" id="osDiscount" oninput="renderPreview()" placeholder="0,00" class="w-full bg-slate-50 border border-slate-300 rounded-lg text-xs p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+              </div>
+            </div>
+          </div>
+
+          <hr class="border-slate-100">
+
+          <!-- Observações de Produção / Acabamento -->
+          <div>
+            <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+              <i class="fa-solid fa-pen-to-square text-blue-500"></i> Observações de Produção & Acabamentos
+            </label>
+            <textarea id="osNotes" oninput="renderPreview()" rows="2" placeholder="Ex: Dobrado ao meio, sangria de 3mm, altura de camada 0.2mm, preenchimento 15%, cor preta, arquivo enviado pelo WhatsApp..." class="w-full bg-slate-50 border border-slate-300 rounded-lg text-xs p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none"></textarea>
+          </div>
+
+        </div>
+
+        <section id="paymentPanel" class="bg-white p-5 rounded-xl border space-y-3 no-print" hidden>
+          <h2 class="font-bold">Recebimentos e recibos desta O.S.</h2>
+          <p class="text-xs text-slate-500">O sinal salvo vira um recebimento. Registre aqui os pagamentos seguintes. Um estorno desfaz o registro financeiro; ele não devolve dinheiro automaticamente.</p>
+          <div class="flex flex-wrap gap-2"><label class="text-xs">Valor (R$)<input id="paymentAmount" type="number" min="0.01" step="0.01" class="block border rounded p-2 w-28"></label><label class="text-xs">Data<input id="paymentDate" type="date" class="block border rounded p-2"></label><label class="text-xs">Forma<select id="paymentMethod" class="block border rounded p-2"><option>Pix</option><option>Dinheiro</option><option>Cartão de Crédito</option><option>Cartão de Débito</option><option>Faturado / Boleto</option></select></label><button onclick="registerPayment()" class="bg-blue-600 text-white px-3 rounded text-xs">Registrar pagamento</button></div>
+          <div id="paymentsList" class="space-y-2 text-xs"></div>
+        </section>
+      </div>
+
+      <!-- PREVIEW COLUMN (Right) -->
+      <div class="lg:col-span-6">
+        
+        <!-- Print Trigger Header -->
+        <div class="bg-slate-800 text-white p-3 rounded-t-xl flex justify-between items-center no-print border-b border-slate-700">
+          <span class="text-xs font-bold uppercase tracking-wider flex items-center gap-2">
+            <i class="fa-solid fa-eye text-blue-400"></i> Pré-visualização da O.S.
+          </span>
+          <button onclick="printOS()" class="px-4 py-1.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg shadow transition-colors flex items-center gap-1.5">
+            <i class="fa-solid fa-print"></i> Imprimir / Gerar PDF
+          </button>
+        </div>
+
+        <!-- PRINTABLE PAPER SHEET -->
+        <div id="printableArea" class="bg-white p-6 sm:p-8 rounded-b-xl shadow-lg border border-slate-200 text-slate-800 font-sans space-y-6 text-xs">
+          
+          <!-- Sheet Header: Logo & Company Info -->
+          <div class="flex justify-between items-start border-b border-slate-200 pb-5">
+            <div class="flex items-center gap-4">
+              <div id="previewLogoContainer" class="w-20 h-20 flex-shrink-0 flex items-center justify-center border border-dashed border-slate-300 rounded-lg overflow-hidden bg-slate-50">
+                <img id="previewLogo" src="" alt="Logo" class="max-w-full max-h-full object-contain hidden">
+                <span id="previewLogoPlaceholder" class="text-slate-400 font-semibold text-[10px] text-center p-1">Sua Logo</span>
+              </div>
+              <div class="space-y-0.5">
+                <h2 id="prevCompName" class="font-bold text-base text-slate-900 leading-tight">Sua Empresa / Gráfica</h2>
+                <p id="prevCompCnpj" class="text-slate-500">CNPJ: 00.000.000/0001-00</p>
+                <p id="prevCompAddress" class="text-slate-500">Rua Exemplo, 123 - Bairro - Cidade/UF</p>
+                <p id="prevCompContact" class="text-slate-500">Tel/WhatsApp: (00) 00000-0000</p>
+              </div>
+            </div>
+
+            <div class="text-right">
+              <div class="inline-block bg-slate-900 text-white px-3 py-1 rounded text-sm font-bold tracking-wider mb-1">
+                O.S. Nº <span id="prevOsNum">0001</span>
+              </div>
+              <div id="prevStatusBadge" class="text-[11px] font-bold px-2 py-0.5 rounded border border-blue-300 bg-blue-50 text-blue-700 text-center mb-1">
+                Em Produção
+              </div>
+              <p class="text-[10px] text-slate-500">Emissão: <span id="prevOsDate">--/--/----</span></p>
+              <p class="text-[10px] font-semibold text-slate-700">Previsão: <span id="prevOsDelivery">--/--/----</span></p>
+            </div>
+          </div>
+
+          <!-- Customer Info Box -->
+          <div class="bg-slate-50 p-3.5 rounded-lg border border-slate-200 grid grid-cols-2 gap-2">
+            <div>
+              <span class="text-[10px] text-slate-400 font-bold uppercase block">Cliente</span>
+              <p id="prevClientName" class="font-bold text-slate-800 text-sm">Cliente Não Informado</p>
+            </div>
+            <div>
+              <span class="text-[10px] text-slate-400 font-bold uppercase block">Telefone / WhatsApp</span>
+              <p id="prevClientPhone" class="font-medium text-slate-700">--</p>
+            </div>
+            <div class="col-span-2">
+              <span class="text-[10px] text-slate-400 font-bold uppercase block">CPF / CNPJ</span>
+              <p id="prevClientDoc" class="font-medium text-slate-700">--</p>
+            </div>
+          </div>
+
+          <!-- Services / Products Table -->
+          <div>
+            <h4 class="font-bold text-slate-800 uppercase text-[11px] mb-2 tracking-wider border-b pb-1">
+              Descrição dos Serviços e Insumos
+            </h4>
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="bg-slate-100 text-slate-600 font-bold text-[10px] uppercase border-y border-slate-200">
+                  <th class="py-2 px-2 text-center w-10">Qtd</th>
+                  <th class="py-2 px-2">Descrição do Serviço / Produto</th>
+                  <th class="py-2 px-2">Material / Filamento / Insumos</th>
+                  <th class="py-2 px-2 text-right w-20">Unitário</th>
+                  <th class="py-2 px-2 text-right w-20">Total</th>
+                </tr>
+              </thead>
+              <tbody id="prevItemsTable" class="divide-y divide-slate-200 text-slate-700 text-[11px]">
+                <!-- Item rows will be rendered here -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Values & Payment Summary -->
+          <div class="flex justify-between items-start pt-2">
+            <!-- Left: Notes -->
+            <div class="w-7/12 pr-4">
+              <h5 class="font-bold text-slate-700 text-[10px] uppercase mb-1">Observações de Produção</h5>
+              <div id="prevNotes" class="bg-slate-50 p-2.5 rounded border border-slate-200 text-[10px] text-slate-600 min-h-[50px] whitespace-pre-wrap">
+                Nenhuma observação.
+              </div>
+            </div>
+
+            <!-- Right: Totals Breakdown -->
+            <div class="w-5/12 bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-1.5 text-right">
+              <div class="flex justify-between text-slate-600">
+                <span>Subtotal Serviços:</span>
+                <span id="prevSubtotal" class="font-semibold">R$ 0,00</span>
+              </div>
+              <div id="prevDiscountRow" class="flex justify-between text-emerald-600 hidden">
+                <span>Desconto:</span>
+                <span id="prevDiscount">- R$ 0,00</span>
+              </div>
+              <div class="flex justify-between text-slate-800 font-bold text-xs pt-1 border-t border-slate-200">
+                <span>Valor Total:</span>
+                <span id="prevTotal">R$ 0,00</span>
+              </div>
+              <div id="prevDepositRow" class="flex justify-between text-blue-600 pt-0.5">
+                <span>Sinal / Entrada:</span>
+                <span id="prevDeposit">- R$ 0,00</span>
+              </div>
+              <div class="flex justify-between text-slate-900 font-bold text-sm pt-1.5 border-t-2 border-slate-300">
+                <span class="text-slate-700">Restante a Pagar:</span>
+                <span id="prevBalance" class="text-blue-700">R$ 0,00</span>
+              </div>
+              <div class="text-[10px] text-slate-500 pt-1">
+                Pagamento: <span id="prevPaymentMethod" class="font-semibold text-slate-700">Pix</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Terms & Signature Cut-off (Canhoto) -->
+          <div class="pt-6 border-t border-slate-200 space-y-6">
+            <div class="text-[9px] text-slate-400 leading-tight">
+              * A aprovação desta Ordem de Serviço autoriza o início imediato da produção. Trabalhos personalizados de gráfica e impressão 3D não possuem devolução após a aprovação da arte/modelo final.
+            </div>
+
+            <!-- Signatures -->
+            <div class="grid grid-cols-2 gap-8 pt-4">
+              <div class="text-center">
+                <div class="border-b border-slate-400 mb-1"></div>
+                <p class="font-medium text-slate-600 text-[10px]">Assinatura da Empresa</p>
+              </div>
+              <div class="text-center">
+                <div class="border-b border-slate-400 mb-1"></div>
+                <p class="font-medium text-slate-600 text-[10px]">Assinatura do Cliente / Recebido</p>
+              </div>
+            </div>
+
+            <!-- Canhoto Separator line -->
+            <div class="border-t-2 border-dashed border-slate-300 relative pt-3 text-center">
+              <span class="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-white px-2 text-[9px] text-slate-400 uppercase tracking-widest font-bold">
+                <i class="fa-solid fa-scissors mr-1"></i> Destacar para o Cliente
+              </span>
+              
+              <div class="flex justify-between items-center text-[10px] text-slate-600 bg-slate-50 p-2.5 rounded border border-slate-200 mt-1">
+                <div>
+                  <p class="font-bold text-slate-800">Comprovante de Retirada - O.S. Nº <span id="prevCanhotoOs">0001</span></p>
+                  <p>Cliente: <span id="prevCanhotoClient">--</span></p>
+                </div>
+                <div class="text-right">
+                  <p>Previsão: <span id="prevCanhotoDelivery" class="font-semibold">--/--/----</span></p>
+                  <p>Saldo Devedor: <span id="prevCanhotoBalance" class="font-bold text-slate-900">R$ 0,00</span></p>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- VIEW: MANAGE OS LIST -->
+    <div id="viewList" class="hidden space-y-6">
+      
+      <!-- Top Control Bar -->
+      <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div class="flex items-center gap-3 w-full sm:w-auto">
+          <div class="relative w-full sm:w-64">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+            <input type="text" id="searchOs" oninput="queueSearch()" placeholder="Buscar por cliente ou nº O.S..." class="w-full bg-slate-50 border border-slate-300 pl-8 pr-3 py-1.5 rounded-lg text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none">
+          </div>
+          <select id="filterStatus" onchange="queueSearch()" class="bg-slate-50 border border-slate-300 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none">
+            <option value="Todos">Todos os Status</option>
+            <option value="Orçamento">Orçamento</option>
+            <option value="Aguardando Aprovação">Aguardando Aprovação</option>
+            <option value="Em Produção">Em Produção</option>
+            <option value="Pronto para Retirada">Pronto p/ Retirada</option>
+            <option value="Entregue">Entregue</option>
+            <option value="Recusado">Recusado</option>
+                <option value="Cancelado">Cancelado</option>
+          </select>
+        </div>
+
+        <button onclick="createNewOs()" class="w-full sm:w-auto px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg shadow-sm transition-colors flex items-center justify-center gap-1.5">
+          <i class="fa-solid fa-plus"></i> Nova Ordem de Serviço
+        </button>
+      </div>
+
+      <!-- Table Card -->
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="overflow-x-auto custom-scrollbar">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-slate-50 text-slate-500 font-bold text-xs uppercase border-b border-slate-200">
+                <th class="p-3.5">Nº O.S.</th>
+                <th class="p-3.5">Data / Previsão</th>
+                <th class="p-3.5">Cliente</th>
+                <th class="p-3.5">Status</th>
+                <th class="p-3.5 text-right">Valor Total</th>
+                <th class="p-3.5 text-right">A Pagar</th>
+                <th class="p-3.5 text-center">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="osListTableBody" class="divide-y divide-slate-200 text-xs text-slate-700">
+              <!-- Rendered dynamically -->
+            </tbody>
+          </table>
+        </div>
+        <div id="emptyState" class="p-8 text-center text-slate-400 hidden">
+          <i class="fa-solid fa-folder-open text-3xl mb-2"></i>
+          <p class="text-xs">Nenhuma ordem de serviço encontrada.</p>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- VIEW: COMPANY CONFIGS -->
+    <div id="viewCompany" class="hidden max-w-2xl mx-auto">
+      <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-5">
+        <div class="border-b border-slate-200 pb-3 flex justify-between items-center">
+          <div>
+            <h2 class="font-bold text-slate-800 text-base">Configurações da Empresa</h2>
+            <p class="text-xs text-slate-500">Estes dados aparecerão impressos no cabeçalho de todas as ordens de serviço.</p>
+          </div>
+          <button onclick="saveCompanyConfig()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg shadow-sm transition-colors">
+            Salvar Dados
+          </button>
+        </div>
+
+        <div class="space-y-4">
+          <!-- Logo upload -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Logomarca da Empresa</label>
+            <div class="flex items-center gap-4">
+              <div id="companyLogoPreviewContainer" class="w-16 h-16 border rounded-lg overflow-hidden flex items-center justify-center bg-slate-50">
+                <img id="companyLogoPreview" src="" alt="" class="max-w-full max-h-full object-contain hidden">
+                <span id="companyLogoPlaceholder" class="text-slate-400 text-[10px]">Sem Logo</span>
+              </div>
+              <input type="file" id="companyLogoInput" accept="image/png,image/jpeg,image/webp" onchange="handleLogoUpload(event)" class="text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div class="sm:col-span-2">
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Nome Fantasia / Razão Social</label>
+              <input type="text" id="cfgCompName" class="w-full bg-slate-50 border border-slate-300 rounded-lg text-xs p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">CNPJ / CPF</label>
+              <input type="text" id="cfgCompCnpj" class="w-full bg-slate-50 border border-slate-300 rounded-lg text-xs p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Telefone / WhatsApp</label>
+              <input type="text" id="cfgCompContact" class="w-full bg-slate-50 border border-slate-300 rounded-lg text-xs p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            </div>
+            <div class="sm:col-span-2">
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Endereço Completo</label>
+              <input type="text" id="cfgCompAddress" class="w-full bg-slate-50 border border-slate-300 rounded-lg text-xs p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+
+  <script src="/ordens-servico/model.js?v=0.2.0"></script>
+  <script src="/ordens-servico/server.js?v=0.2.0"></script>
+</body>
+</html>
