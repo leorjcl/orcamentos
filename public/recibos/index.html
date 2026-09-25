@@ -16,6 +16,7 @@
             print-color-adjust: exact !important;
         }
 
+        @media screen { main, header > div { max-width: none !important; } }
         /* Estilização para Impressão */
         @media print {
             .no-print {
@@ -69,6 +70,8 @@
     </style>
 </head>
 <body class="h-full text-slate-800 antialiased flex flex-col min-h-screen">
+
+    <div class="no-print" style="padding:10px 20px;background:#fff;border-bottom:1px solid #e2e8f0;display:flex;gap:24px;font-size:13px"><a href="/">← Painel YGPrint</a><a href="/orcamentos">Orçamentos e pedidos</a></div>
 
     <header class="bg-slate-900 text-white no-print border-b border-slate-800 sticky top-0 z-30">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
@@ -1029,7 +1032,7 @@
                     updatePreview();
                     if (receipt.voidedAt) document.querySelector('#receiptContainer .absolute > div').textContent = 'ESTORNADO';
                     toolbar.replaceChildren();
-                    const back = document.createElement('a');back.href='/ordens-servico';back.textContent='← Ordens de serviço';toolbar.append(back);
+                    const back = document.createElement('a');back.href='/ordens-servico/index.html?id='+encodeURIComponent(os.id);back.textContent='← Voltar ao pedido';toolbar.append(back);
                     const title = document.createElement('span');title.textContent='Recibo salvo · O.S. #' + os.number;toolbar.append(title);
                     for(const [label,action] of [['Imprimir',printReceipt],['Baixar PDF',generatePDF]]) {
                         const button=document.createElement('button');button.textContent=label;button.onclick=action;button.style.cssText='border:1px solid white;border-radius:6px;padding:8px';toolbar.append(button);

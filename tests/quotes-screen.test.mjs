@@ -28,8 +28,8 @@ try {
  authenticated=true;await act(async()=>{document.querySelector('form').dispatchEvent(new dom.window.Event('submit',{bubbles:true,cancelable:true}));await new Promise(r=>setTimeout(r,20));});
  assert.match(document.body.textContent,/Cliente de teste/);assert.ok(requests.some(s=>s.includes('scope=quotes')));
  await click('Pedidos');assert.ok(requests.at(-1).includes('scope=orders'));assert.match(document.body.textContent,/Em Produção/);
- await click('Abrir pedido');assert.equal(document.querySelector('iframe').getAttribute('src'),'/ordens-servico/index.html?id=9');
- await click('← Voltar à lista');assert.match(document.body.textContent,/Cliente de teste/);
+ assert.equal([...document.querySelectorAll('a')].find(a=>a.textContent==='Abrir pedido').getAttribute('href'),'/ordens-servico/index.html?id=9');
+ assert.equal(document.querySelector('iframe'),null);
  fail=true;await click('Filtrar');assert.match(document.body.textContent,/Falha de conexão/);assert.doesNotMatch(document.body.textContent,/Cliente de teste/);
  console.log('OK: tela React exige login, separa listas, abre pedido e remove dados antigos ao falhar a consulta.');
 } finally {await act(async()=>root.unmount());dom.window.close();}

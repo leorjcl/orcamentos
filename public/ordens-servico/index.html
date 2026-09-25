@@ -10,6 +10,7 @@
   <style>
 
     [hidden] { display: none !important; }
+    @media screen { #appMain, #appHeader > div { max-width: none; } }
     body { font-family: 'Inter', sans-serif; }
     
     @page { size: A4; margin: 10mm; }
@@ -53,6 +54,8 @@
     <p id="loginMessage" role="status" class="text-sm mt-3 text-red-700">Verificando conexão…</p>
   </section>
   <div id="serverNotice" role="status" class="no-print bg-blue-50 p-3 text-sm text-blue-900 text-center" hidden></div>
+
+  <div class="no-print" style="padding:10px 20px;background:#fff;border-bottom:1px solid #e2e8f0;display:flex;gap:24px;font-size:13px"><a href="/">← Painel YGPrint</a><a href="/orcamentos">Orçamentos e pedidos</a></div>
 
   <!-- Header / Navbar -->
   <header id="appHeader" hidden class="bg-slate-900 text-white shadow-md no-print sticky top-0 z-50">

@@ -90,7 +90,7 @@ async function loadPayments() {
   for(const p of payments) {
     const line=document.createElement('div');line.className='flex flex-wrap gap-3 border-t pt-2';
     const label=document.createElement('span');label.textContent=`${formatDate(p.paid_date)} · ${p.method} · ${money(p.amount_cents/100)}${p.voided_at?' · ESTORNADO':''}`;line.append(label);
-    const link=document.createElement('a');link.textContent='Abrir recibo';link.className='text-blue-700 underline';link.href=`/recibos/index.html?pagamento=${p.id}`;link.target='_blank';link.rel='noopener';line.append(link);
+    const link=document.createElement('a');link.textContent='Abrir recibo';link.className='text-blue-700 underline';link.href=`/recibos/index.html?pagamento=${p.id}`;line.append(link);
     if(!p.voided_at) {const btn=document.createElement('button');btn.textContent='Estornar';btn.className='text-red-700';btn.onclick=guarded(async()=>{
       const reason=prompt('Motivo do estorno (mínimo de 5 caracteres). Isto não faz transferência bancária.');if(!reason)return;
       await api(`payments/${p.id}/void`,'POST',{reason});loadOrder(await api(`orders/${currentOsId}`));await loadPayments();await refreshOrders();notifyParent();notice('Estorno registrado no banco.');
